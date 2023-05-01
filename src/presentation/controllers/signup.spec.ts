@@ -1,15 +1,29 @@
 /// Imports
-import { describe, it, expect, vitest } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { SignUpController } from './signup';
 import { MissingParamError } from '../errros/missiing-param-error';
 import { InvalidParamError } from '../errros/invalid-param-error';
 import { ServerError } from '../errros/server-error';
 import { EmailValidator } from '../protocols';
+import { AddAccount, AddAccountModel } from '../../domain/usecases/add-account';
+import { AccountModel } from '../../domain/models/account';
 
-interface SutTypes {
-  sut: SignUpController;
-  emailValidatorStub: EmailValidator;
-}
+const makeAddAccount = (): AddAccount => {
+  class AddAccountStub implements AddAccount {
+    add(account: AddAccountModel): AccountModel {
+      const accountModelFake = {
+        id: 'valid_id',
+        name: 'valid_name',
+        email: 'valid_email@email.com',
+        password: 'valid_password'
+      };
+
+      return accountModelFake;
+    }
+  }
+
+  return new AddAccountStub();
+};
 
 const makeEmailValidator = (): EmailValidator => {
   class EmailValidatorStub implements EmailValidator {
@@ -21,18 +35,26 @@ const makeEmailValidator = (): EmailValidator => {
   return new EmailValidatorStub();
 };
 
+interface SutTypes {
+  sut: SignUpController;
+  emailValidatorStub: EmailValidator;
+  addAccountStub: AddAccount;
+}
+
 const makeSut = (): SutTypes => {
   const emailValidatorStub = makeEmailValidator();
-  const sut = new SignUpController(emailValidatorStub);
+  const addAccountStub = makeAddAccount();
+  const sut = new SignUpController(emailValidatorStub, addAccountStub);
 
   return {
     sut,
-    emailValidatorStub
+    emailValidatorStub,
+    addAccountStub
   };
 };
 // Tests
 describe('Signup Controller', async () => {
-  it('Should return 400 if no name is provided', async () => {
+  test('Should return 400 if no name is provided', async () => {
     const { sut } = makeSut();
     const httpRequest = {
       body: {
@@ -45,7 +67,7 @@ describe('Signup Controller', async () => {
     expect(httpResponse.statusCode).toBe(400);
     expect(httpResponse.body).toEqual(new MissingParamError('name'));
   });
-  it('Should return 400 if no email is provided', async () => {
+  test('Should return 400 if no email is provided', async () => {
     const { sut } = makeSut();
     const httpRequest = {
       body: {
@@ -58,7 +80,7 @@ describe('Signup Controller', async () => {
     expect(httpResponse.statusCode).toBe(400);
     expect(httpResponse.body).toEqual(new MissingParamError('email'));
   });
-  it('Should return 400 if no password is provided', async () => {
+  test('Should return 400 if no password is provided', async () => {
     const { sut } = makeSut();
     const httpRequest = {
       body: {
@@ -71,7 +93,7 @@ describe('Signup Controller', async () => {
     expect(httpResponse.statusCode).toBe(400);
     expect(httpResponse.body).toEqual(new MissingParamError('password'));
   });
-  it('Should return 400 if no password confirmation is provided', async () => {
+  test('Should return 400 if no password confirmation is provided', async () => {
     const { sut } = makeSut();
     const httpRequest = {
       body: {
@@ -86,8 +108,7 @@ describe('Signup Controller', async () => {
       new MissingParamError('passwordConfirmation')
     );
   });
-
-  it('Should return 400 if no password confirmation fail is provided', async () => {
+  test('Should return 400 if no password confirmation fail is provided', async () => {
     const { sut } = makeSut();
     const httpRequest = {
       body: {
@@ -103,10 +124,9 @@ describe('Signup Controller', async () => {
       new InvalidParamError('passwordConfirmation')
     );
   });
-
-  it('Should return 400 if email invalid is provided', async () => {
+  test('Should return 400 if email invalid is provided', async () => {
     const { emailValidatorStub, sut } = makeSut();
-    vitest.spyOn(emailValidatorStub, 'isValid').mockReturnValueOnce(false);
+    vi.spyOn(emailValidatorStub, 'isValid').mockReturnValueOnce(false);
 
     const httpRequest = {
       body: {
@@ -120,9 +140,9 @@ describe('Signup Controller', async () => {
     expect(httpResponse.statusCode).toBe(400);
     expect(httpResponse.body).toEqual(new InvalidParamError('email'));
   });
-  it('Should call EmailValidator with correct email', async () => {
+  test('Should call EmailValidator wtesth correct email', async () => {
     const { emailValidatorStub, sut } = makeSut();
-    const isValidSpy = vitest
+    const isValidSpy = vi
       .spyOn(emailValidatorStub, 'isValid')
       .mockReturnValueOnce(false);
 
@@ -137,14 +157,11 @@ describe('Signup Controller', async () => {
     sut.handle(httpRequest);
     expect(isValidSpy).toHaveBeenCalledWith('any_email@email.com');
   });
-
-  it('Should return 500', async () => {
+  test('Should return 500 EmailValidator throw', async () => {
     const { emailValidatorStub, sut } = makeSut();
-    const isValidSpy = vitest
-      .spyOn(emailValidatorStub, 'isValid')
-      .mockImplementationOnce(() => {
-        throw new Error();
-      });
+    vi.spyOn(emailValidatorStub, 'isValid').mockImplementationOnce(() => {
+      throw new Error();
+    });
 
     const httpRequest = {
       body: {
@@ -158,4 +175,44 @@ describe('Signup Controller', async () => {
     expect(httpResponse.statusCode).toBe(500);
     expect(httpResponse.body).toEqual(new ServerError());
   });
+
+  //   test('Should return 500 if account addAccount', async () => {
+  //     const { addAccountStub, sut } = makeSut();
+  //     vi.spyOn(addAccountStub, 'add').mockImplementationOnce(() => {
+  //       throw new Error();
+  //     });
+
+  //     const httpRequest = {
+  //       body: {
+  //         name: 'any_name',
+  //         email: 'any_email@email.com',
+  //         password: 'any_password',
+  //         passwordConfirmation: 'any_password'
+  //       }
+  //     };
+  //     const httpResponse = sut.handle(httpRequest);
+
+  //     expect(httpResponse.statusCode).toBe(500);
+  //     // expect(httpResponse.body).toEqual(new ServerError());
+  //   });
+
+  //   test('Should call addAccount wtesth correct values', async () => {
+  //     const { sut, addAccountStub } = makeSut();
+  //     const spy = vi.spyOn(addAccountStub, 'add');
+
+  //     const httpRequest = {
+  //       body: {
+  //         name: 'any_name',
+  //         email: 'any_email@email.com',
+  //         password: 'any_password'
+  //       }
+  //     };
+
+  //     sut.handle(httpRequest);
+  //     expect(spy).toHaveBeenCalledWith({
+  //       name: 'any_name',
+  //       email: 'any_email@email.com',
+  //       password: 'any_password'
+  //     });
+  //   });
 });
