@@ -4,8 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest",
-    "coverage": "vitest run --coverage",
+    "test": "jest --passWithNoTests --silent --noStackTrace --runInBand",
+    "test:verbose": "jest --passWithNoTests --runInBand",
+    "test:unit": "npm test -- --watch -c jest-unit-config.js",
+    "test:integration": "npm test -- --watch -c jest-integration-config.js",
+    "test:staged": "npm test -- --findRelatedTests",
+    "test:ci": "npm test -- --coverage",
+    "coverage": "jest run --coverage",
     "prepare": "husky install",
     "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write"
   },
@@ -13,10 +18,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@jest/globals": "^29.5.0",
+    "@types/jest": "^29.5.1",
     "@types/node": "^18.16.3",
+    "@types/validator": "^13.7.15",
     "@typescript-eslint/eslint-plugin": "^5.59.1",
-    "@vitest/coverage-c8": "^0.30.1",
-    "@vitest/ui": "^0.30.1",
     "eslint": "^8.39.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-config-standard-with-typescript": "^34.0.1",
@@ -26,9 +32,14 @@
     "eslint-plugin-promise": "^6.1.1",
     "git-commit-msg-linter": "^4.10.0",
     "husky": "^8.0.0",
+    "jest": "^29.5.0",
     "lint-staged": "^13.2.2",
     "prettier": "^2.8.8",
-    "typescript": "^5.0.4",
-    "vitest": "^0.30.1"
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "validator": "^13.9.0"
   }
 }
